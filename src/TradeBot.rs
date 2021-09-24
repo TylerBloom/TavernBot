@@ -1,5 +1,6 @@
 
 mod card;
+mod cardDB;
 
 use std::env;
 
@@ -10,6 +11,8 @@ use serenity::{
 };
 
 pub use card::Card;
+pub use cardDB::CardDB;
+
 
 struct Handler;
 

@@ -328,6 +328,7 @@ async fn main() {
         let mut data = client.data.write().await;
         data.insert::<CommandCounter>(HashMap::default());
         data.insert::<ShardManagerContainer>(Arc::clone(&client.shard_manager));
+        
         data.insert::<CardDB::CardDB>( CardDB::create( String::from( "AtomicCards.json" ) ) );
     }
 
