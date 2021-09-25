@@ -15,7 +15,7 @@ pub mod CardDB {
     }
 
     pub struct CardDB {
-        cards: HashMap<String, Card::Card>
+        cards: HashMap<String, Card::AtomicCard>
     }
     
     pub fn new() -> CardDB {
@@ -34,7 +34,7 @@ pub mod CardDB {
     
     impl CardDB {
 
-        pub fn get_card( &self, card_name: &String ) -> Option<&Card::Card> {
+        pub fn get_card( &self, card_name: &String ) -> Option<&Card::AtomicCard> {
             self.cards.get( card_name )
         }
         
@@ -76,7 +76,7 @@ pub mod CardDB {
                 }
 
                 // Adds a card to the HashMap index by the card's name
-                self.cards.insert( name.clone(), Card::Card { name, printings, types } );
+                self.cards.insert( name.clone(), Card::AtomicCard { name, printings, types } );
             }
 
             Ok(())
