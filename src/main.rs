@@ -9,8 +9,11 @@
 //! features = ["framework", "standard_framework"]
 //! ```
 
+mod utils;
 mod card;
-mod cardDB;
+mod card_db;
+mod card_entry;
+mod tradelist;
 
 use std::{
     collections::{HashMap, HashSet},
@@ -47,8 +50,11 @@ use serenity::{
 };
 use tokio::sync::Mutex;
 
+pub use utils::*;
 pub use card::Card;
-pub use cardDB::CardDB;
+pub use card_db::CardDB;
+pub use card_entry::CardEntry;
+pub use tradelist::Tradelist;
 
 
 struct Handler;

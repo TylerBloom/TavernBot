@@ -34,10 +34,21 @@ pub mod Card{
     }
 
     impl<'a> Card<'a> {
-        fn matches( &'a self, other: &'a Card ) -> bool {
-            self.card == other.card && self.printing == other.printing
+        pub fn matches( &self, other: &Card<'a> ) -> bool {
+            *self.card == *other.card && self.printing == other.printing
+        }
+        
+        pub fn get_name( &self ) -> String {
+            self.card.name.clone()
+        }
+    }
+
+    impl<'a> PartialEq for Card<'a> {
+        fn eq( &self, other: &Card<'a> ) -> bool {
+            let mut digest : bool  = self.printing == other.printing;
+            digest |= *self.card == *other.card;
+            digest
         }
     }
 
 }
-

@@ -11,6 +11,7 @@
 
 mod card;
 mod cardDB;
+mod tradelist;
 
 use std::{
     collections::{HashMap, HashSet},
