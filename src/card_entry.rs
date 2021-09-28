@@ -4,12 +4,13 @@ pub mod CardEntry {
     use crate::utils::Types::*;
     use crate::card::Card;
 
+    #[derive( Clone )]
     pub struct CardEntry<'a> {
         pub count: CardCount,
         pub card: Card::Card<'a>
     }
 
-    pub fn new<'a>( count: CardCount, card: Card::Card ) -> CardEntry {
+    pub fn new( count: CardCount, card: Card::Card ) -> CardEntry {
         CardEntry { count, card }
     }
     

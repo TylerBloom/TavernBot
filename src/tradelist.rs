@@ -26,57 +26,58 @@ pub mod Tradelist {
             self.is_public = false;
         }
 
-        pub fn add_card( &mut self, count: CardCount, card: &Card::Card<'a> ) {
+        fn add_new_entry( &mut self, entry: CardEntry::CardEntry<'a> ) {
+            let mut new_vec: Vec<CardEntry::CardEntry> = Vec::new();
+            new_vec.push( entry.clone() );
+            self.cards.insert( entry.card.get_name(), new_vec );
+        }
+
+        fn increase_entry( &mut self, entry: CardEntry::CardEntry<'a> ) {
+            for c in self.cards.get_mut(&entry.card.get_name()).unwrap() {
+                if c.card == entry.card {
+                    c.count += entry.count
+                }
+            }
+            self.cards.get_mut(&entry.card.get_name()).unwrap().push( entry );
+        }
+
+        fn decrease_entry( &mut self, entry: CardEntry::CardEntry<'a> ) {
+            let listing = self.cards.get_mut(&entry.card.get_name()).unwrap();
+            let mut i: usize = 0;
+            while i < listing.len() {
+                if listing[i].card == entry.card {
+                    listing[i].dec_count( &entry.count );
+                    listing.remove( i );
+                    if listing.len() == 0 {
+                        self.cards.remove( &entry.card.get_name() );
+                    }
+                    break
+                }
+                i += 1;
+            }
+        }
+
+        pub fn add_card( &mut self, count: CardCount, card: Card::Card<'a> ) {
+            if count == 0 {
+                ()
+            }
+
+            match self.cards.get( &card.get_name() ) {
+                None => self.add_new_entry( CardEntry::new( count, card ) ),
+                Some(_) => self.increase_entry( CardEntry::new( count, card ) )
+            }
+            
+        }
+
+        pub fn remove_card( &mut self, count: CardCount, card: Card::Card<'a> ) {
             if count == 0 {
                 ()
             }
             
-            let card_name = card.get_name();
-            let mut entry = self.cards.get_mut( &card_name );
-            if entry.is_none() {
-                let mut new_vec: Vec<CardEntry::CardEntry<'a>> = Vec::new();
-                new_vec.push( CardEntry::new(count, *card) );
-                self.cards.insert( card_name, new_vec );
-                ()
+            match self.cards.get( &card.get_name() ) {
+                None => (),
+                Some(_) => self.decrease_entry( CardEntry::new( count, card ) )
             }
-            let mut listing = entry.unwrap();
-            for c in listing {
-                if c.card == *card {
-                    c.count += count
-                }
-            }
-            listing.push( CardEntry::new(count, *card) );
-            ()
-        }
-
-        pub fn remove_card( &mut self, entry: CardEntry::CardEntry<'a> ) {
-            if entry.count == 0 {
-                ()
-            }
-            
-            let card_name = entry.card.get_name();
-            let entry_list = self.cards.get( &card_name );
-            if entry_list.is_none() {
-                ()
-            }
-            let mut listing = entry_list.unwrap();
-            let mut needs_removed: bool = false;
-            let mut index: usize = 0 ;
-            for &(mut c) in listing {
-                if c.card == entry.card {
-                    c.dec_count( &entry.count );
-                    needs_removed = c.count == 0;
-                    break
-                }
-                index += 1;
-            }
-            if needs_removed {
-                listing.remove( index );
-            }
-            if listing.len() == 0 {
-                self.cards.remove( &card_name );
-            }
-            ()
         }
 
         pub fn contains_card( &self, card: Card::Card<'a> ) -> bool {
