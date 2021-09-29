@@ -9,11 +9,11 @@
 //! features = ["framework", "standard_framework"]
 //! ```
 
-mod utils;
 mod card;
 mod card_db;
 mod card_entry;
 mod tradelist;
+mod utils;
 
 use std::{
     collections::{HashMap, HashSet},
@@ -30,13 +30,7 @@ use serenity::{
         buckets::{LimitedFor, RevertBucket},
         help_commands,
         macros::{check, command, group, help, hook},
-        Args,
-        CommandGroup,
-        CommandOptions,
-        CommandResult,
-        DispatchError,
-        HelpOptions,
-        Reason,
+        Args, CommandGroup, CommandOptions, CommandResult, DispatchError, HelpOptions, Reason,
         StandardFramework,
     },
     http::Http,
@@ -50,12 +44,11 @@ use serenity::{
 };
 use tokio::sync::Mutex;
 
-pub use utils::*;
 pub use card::Card;
 pub use card_db::CardDB;
 pub use card_entry::CardEntry;
 pub use tradelist::Tradelist;
-
+pub use utils::*;
 
 struct Handler;
 
@@ -111,7 +104,10 @@ async fn my_help(
 
 #[hook]
 async fn before(ctx: &Context, msg: &Message, command_name: &str) -> bool {
-    println!("Got command '{}' by user '{}'", command_name, msg.author.name);
+    println!(
+        "Got command '{}' by user '{}'",
+        command_name, msg.author.name
+    );
 
     true // if `before` returns false, command processing doesn't happen.
 }
@@ -147,7 +143,10 @@ async fn dispatch_error(ctx: &Context, msg: &Message, error: DispatchError) {
         if info.is_first_try {
             let _ = msg
                 .channel_id
-                .say(&ctx.http, &format!("Try this again in {} seconds.", info.as_secs()))
+                .say(
+                    &ctx.http,
+                    &format!("Try this again in {} seconds.", info.as_secs()),
+                )
                 .await;
         }
     }
@@ -166,7 +165,10 @@ fn _dispatch_error_no_macro<'fut>(
             if info.is_first_try {
                 let _ = msg
                     .channel_id
-                    .say(&ctx.http, &format!("Try this again in {} seconds.", info.as_secs()))
+                    .say(
+                        &ctx.http,
+                        &format!("Try this again in {} seconds.", info.as_secs()),
+                    )
                     .await;
             }
         };
@@ -194,71 +196,77 @@ async fn main() {
                 Ok(bot_id) => (owners, bot_id.id),
                 Err(why) => panic!("Could not access the bot id: {:?}", why),
             }
-        },
+        }
         Err(why) => panic!("Could not access application info: {:?}", why),
     };
 
     let framework = StandardFramework::new()
-        .configure(|c| c
-                   .with_whitespace(true)
-                   .on_mention(Some(bot_id))
-                   .prefix("!")
-                   // In this case, if "," would be first, a message would never
-                   // be delimited at ", ", forcing you to trim your arguments if you
-                   // want to avoid whitespaces at the start of each.
-                   .delimiters(vec![", ", ","])
-                   // Sets the bot's owners. These will be used for commands that
-                   // are owners only.
-                   .owners(owners))
-
-    // Set a function to be called prior to each command execution. This
-    // provides the context of the command, the message that was received,
-    // and the full name of the command that will be called.
-    //
-    // Avoid using this to determine whether a specific command should be
-    // executed. Instead, prefer using the `#[check]` macro which
-    // gives you this functionality.
-    //
-    // **Note**: Async closures are unstable, you may use them in your
-    // application if you are fine using nightly Rust.
-    // If not, we need to provide the function identifiers to the
-    // hook-functions (before, after, normal, ...).
+        .configure(|c| {
+            c.with_whitespace(true)
+                .on_mention(Some(bot_id))
+                .prefix("!")
+                // In this case, if "," would be first, a message would never
+                // be delimited at ", ", forcing you to trim your arguments if you
+                // want to avoid whitespaces at the start of each.
+                .delimiters(vec![", ", ","])
+                // Sets the bot's owners. These will be used for commands that
+                // are owners only.
+                .owners(owners)
+        })
+        // Set a function to be called prior to each command execution. This
+        // provides the context of the command, the message that was received,
+        // and the full name of the command that will be called.
+        //
+        // Avoid using this to determine whether a specific command should be
+        // executed. Instead, prefer using the `#[check]` macro which
+        // gives you this functionality.
+        //
+        // **Note**: Async closures are unstable, you may use them in your
+        // application if you are fine using nightly Rust.
+        // If not, we need to provide the function identifiers to the
+        // hook-functions (before, after, normal, ...).
         .before(before)
-    // Similar to `before`, except will be called directly _after_
-    // command execution.
+        // Similar to `before`, except will be called directly _after_
+        // command execution.
         .after(after)
-    // Set a function that's called whenever an attempted command-call's
-    // command could not be found.
+        // Set a function that's called whenever an attempted command-call's
+        // command could not be found.
         .unrecognised_command(unknown_command)
-    // Set a function that's called whenever a message is not a command.
+        // Set a function that's called whenever a message is not a command.
         .normal_message(normal_message)
-    // Set a function that's called whenever a command's execution didn't complete for one
-    // reason or another. For example, when a user has exceeded a rate-limit or a command
-    // can only be performed by the bot owner.
+        // Set a function that's called whenever a command's execution didn't complete for one
+        // reason or another. For example, when a user has exceeded a rate-limit or a command
+        // can only be performed by the bot owner.
         .on_dispatch_error(dispatch_error)
-    // Can't be used more than once per 5 seconds:
-        .bucket("emoji", |b| b.delay(5)).await
-    // Can't be used more than 2 times per 30 seconds, with a 5 second delay applying per channel.
-    // Optionally `await_ratelimits` will delay until the command can be executed instead of
-    // cancelling the command invocation.
-        .bucket("complicated", |b| b.limit(2).time_span(30).delay(5)
-            // The target each bucket will apply to.
-            .limit_for(LimitedFor::Channel)
-            // The maximum amount of command invocations that can be delayed per target.
-            // Setting this to 0 (default) will never await/delay commands and cancel the invocation.
-            .await_ratelimits(1)
-            // A function to call when a rate limit leads to a delay.
-            .delay_action(delay_action)).await
-    // The `#[group]` macro generates `static` instances of the options set for the group.
-    // They're made in the pattern: `#name_GROUP` for the group instance and `#name_GROUP_OPTIONS`.
-    // #name is turned all uppercase
+        // Can't be used more than once per 5 seconds:
+        .bucket("emoji", |b| b.delay(5))
+        .await
+        // Can't be used more than 2 times per 30 seconds, with a 5 second delay applying per channel.
+        // Optionally `await_ratelimits` will delay until the command can be executed instead of
+        // cancelling the command invocation.
+        .bucket("complicated", |b| {
+            b.limit(2)
+                .time_span(30)
+                .delay(5)
+                // The target each bucket will apply to.
+                .limit_for(LimitedFor::Channel)
+                // The maximum amount of command invocations that can be delayed per target.
+                // Setting this to 0 (default) will never await/delay commands and cancel the invocation.
+                .await_ratelimits(1)
+                // A function to call when a rate limit leads to a delay.
+                .delay_action(delay_action)
+        })
+        .await
+        // The `#[group]` macro generates `static` instances of the options set for the group.
+        // They're made in the pattern: `#name_GROUP` for the group instance and `#name_GROUP_OPTIONS`.
+        // #name is turned all uppercase
         .help(&MY_HELP)
         .group(&GENERAL_GROUP);
 
     let mut client = Client::builder(&token)
         .event_handler(Handler)
         .framework(framework)
-        // For this example to run properly, the "Presence Intent" and "Server Members Intent" 
+        // For this example to run properly, the "Presence Intent" and "Server Members Intent"
         // options need to be enabled.
         // These are needed so the `required_permissions` macro works on the commands that need to
         // use it.
@@ -270,7 +278,7 @@ async fn main() {
 
     {
         let mut data = client.data.write().await;
-        data.insert::<CardDB::CardDB>( CardDB::create( String::from( "AtomicCards.json" ) ) );
+        data.insert::<CardDB::CardDB>(CardDB::create(String::from("AtomicCards.json")));
     }
 
     if let Err(why) = client.start().await {
@@ -281,23 +289,33 @@ async fn main() {
 #[command]
 async fn printings(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let arg_card = args.single::<String>();
-    
+
     let data = ctx.data.read().await;
     let db = data.get::<CardDB::CardDB>().unwrap();
 
     if arg_card.is_err() {
-        msg.channel_id.say( &ctx.http, &String::from("You need to specify a card to see it's printings.") ).await?;
+        msg.channel_id
+            .say(
+                &ctx.http,
+                &String::from("You need to specify a card to see it's printings."),
+            )
+            .await?;
     } else {
         let card_name = arg_card.unwrap();
         //let db = CardDB::create( String::from( "AtomicCards.json" ) );
-        let card = db.get_card( &card_name );
-    
+        let card = db.get_card(&card_name);
+
         if card.is_none() {
-            msg.channel_id.say( &ctx.http, &String::from("The card that you specified could not be found.") ).await?;
+            msg.channel_id
+                .say(
+                    &ctx.http,
+                    &String::from("The card that you specified could not be found."),
+                )
+                .await?;
         } else {
-            let mut content = format!( "{} was printed the following sets: ", &card_name );
+            let mut content = format!("{} was printed the following sets: ", &card_name);
             for p in &card.unwrap().printings {
-                content += &format!( "[{}], ", p );
+                content += &format!("[{}], ", p);
             }
             msg.channel_id.say(&ctx.http, &content).await?;
         }
@@ -305,4 +323,3 @@ async fn printings(ctx: &Context, msg: &Message, mut args: Args) -> CommandResul
 
     Ok(())
 }
-
