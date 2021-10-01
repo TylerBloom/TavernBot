@@ -18,19 +18,20 @@ pub mod Card {
     impl PartialEq for AtomicCard {
         fn eq(&self, other: &AtomicCard) -> bool {
             let mut digest: bool = self.name == other.name;
-            digest |= self.printings == other.printings;
             digest |= self.types == other.types;
+            // Due to issues with Cards keeping a reference to an Atomic, this isn't being checked
+            //digest |= self.printings == other.printings;
             digest
         }
     }
 
-    #[derive(Clone)]
-    pub struct Card<'a> {
-        pub card: &'a AtomicCard,
-        pub printing: String,
+    #[derive( Clone )]
+    pub struct Card  {
+        pub card: AtomicCard,
+        pub printing: String
     }
 
-    pub fn new<'a>(card: &'a AtomicCard, printing: Option<String>) -> Card<'a> {
+    pub fn new( card: AtomicCard, printing: Option<String> ) -> Card {
         match printing {
             Some(p) => Card { card, printing: p },
             None => Card {
@@ -40,9 +41,13 @@ pub mod Card {
         }
     }
 
-    impl<'a> Card<'a> {
-        pub fn matches(&self, other: &Card) -> bool {
-            self.card == other.card && self.printing == other.printing
+    impl Card {
+        pub fn matches( &self, other: &Card ) -> bool {
+            let mut digest : bool = self.card == other.card;
+            if( ! self.printing.is_empty() && ! other.printing.is_empty() ) {
+                digest &= self.printing == other.printing;
+            }
+            digest
         }
 
         pub fn get_name(&self) -> String {
@@ -50,11 +55,9 @@ pub mod Card {
         }
     }
 
-    impl<'a> PartialEq for Card<'a> {
-        fn eq(&self, other: &Card) -> bool {
-            let mut digest: bool = self.printing == other.printing;
-            digest |= self.card == other.card;
-            digest
+    impl PartialEq for Card {
+        fn eq( &self, other: &Card ) -> bool {
+            self.card == other.card && self.printing == other.printing
         }
     }
 }

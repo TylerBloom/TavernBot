@@ -1,25 +1,31 @@
 pub mod Tradelist {
 
     use std::collections::HashMap;
-
+    
+    use serenity::model;
+    use serenity::prelude::*;
+    
+    use crate::utils::Types::*;
     use crate::card::Card;
     use crate::card_entry::CardEntry;
     use crate::utils::Types::*;
 
-    pub struct Tradelist<'a> {
-        cards: HashMap<String, Vec<CardEntry::CardEntry<'a>>>,
-        is_public: bool,
+    pub struct Tradelist {
+        cards: HashMap<String, Vec<CardEntry::CardEntry>>,
+        is_public: bool
+    }
+    
+    impl TypeMapKey for Tradelist {
+        type Value = HashMap<model::UserId, Tradelist>;
+    }
+    
+    pub fn new( ) -> Tradelist {
+        Tradelist { cards: HashMap::new(), is_public: false }
     }
 
-    pub fn new<'a>() -> Tradelist<'a> {
-        Tradelist {
-            cards: HashMap::new(),
-            is_public: false,
-        }
-    }
+    impl Tradelist {
 
-    impl<'a> Tradelist<'a> {
-        pub fn set_public(&mut self) {
+        pub fn set_public( &mut self ) {
             self.is_public = true;
         }
 
@@ -27,13 +33,13 @@ pub mod Tradelist {
             self.is_public = false;
         }
 
-        fn add_new_entry(&mut self, entry: CardEntry::CardEntry<'a>) {
+        fn add_new_entry( &mut self, entry: CardEntry::CardEntry ) {
             let mut new_vec: Vec<CardEntry::CardEntry> = Vec::new();
             new_vec.push(entry.clone());
             self.cards.insert(entry.card.get_name(), new_vec);
         }
 
-        fn increase_entry(&mut self, entry: CardEntry::CardEntry<'a>) {
+        fn increase_entry( &mut self, entry: CardEntry::CardEntry ) {
             for c in self.cards.get_mut(&entry.card.get_name()).unwrap() {
                 if c.card == entry.card {
                     c.count += entry.count
@@ -45,7 +51,7 @@ pub mod Tradelist {
                 .push(entry);
         }
 
-        fn decrease_entry(&mut self, entry: CardEntry::CardEntry<'a>) {
+        fn decrease_entry( &mut self, entry: CardEntry::CardEntry ) {
             let listing = self.cards.get_mut(&entry.card.get_name()).unwrap();
             let mut i: usize = 0;
             while i < listing.len() {
@@ -61,7 +67,7 @@ pub mod Tradelist {
             }
         }
 
-        pub fn add_card(&mut self, count: CardCount, card: Card::Card<'a>) {
+        pub fn add_card( &mut self, count: CardCount, card: Card::Card ) {
             if count == 0 {
                 ()
             }
@@ -72,7 +78,7 @@ pub mod Tradelist {
             }
         }
 
-        pub fn remove_card(&mut self, count: CardCount, card: Card::Card<'a>) {
+        pub fn remove_card( &mut self, count: CardCount, card: Card::Card ) {
             if count == 0 {
                 ()
             }
@@ -83,7 +89,7 @@ pub mod Tradelist {
             }
         }
 
-        pub fn contains_card(&self, card: Card::Card<'a>) -> bool {
+        pub fn contains_card( &self, card: Card::Card ) -> bool {
             let mut digest: bool = false;
             let card_name = card.get_name();
             let entry = self.cards.get(&card_name);

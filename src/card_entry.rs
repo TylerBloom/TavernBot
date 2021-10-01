@@ -3,18 +3,18 @@ pub mod CardEntry {
     use crate::card::Card;
     use crate::utils::Types::*;
 
-    #[derive(Clone)]
-    pub struct CardEntry<'a> {
+    #[derive( Clone )]
+    pub struct CardEntry {
         pub count: CardCount,
-        pub card: Card::Card<'a>,
+        pub card: Card::Card
     }
 
     pub fn new(count: CardCount, card: Card::Card) -> CardEntry {
         CardEntry { count, card }
     }
-
-    impl<'a> CardEntry<'a> {
-        pub fn inc_count(&mut self, count: &CardCount) {
+    
+    impl CardEntry {
+        pub fn inc_count( &mut self, count: &CardCount ) {
             self.count += count;
         }
 
