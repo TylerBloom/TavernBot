@@ -31,13 +31,11 @@ pub mod Card {
         pub printing: String
     }
 
-    pub fn new( card: AtomicCard, printing: Option<String> ) -> Card {
-        match printing {
-            Some(p) => Card { card, printing: p },
-            None => Card {
-                card,
-                printing: String::from(""),
-            },
+    pub fn new( card: AtomicCard, printing: String ) -> Card {
+        if card.printings.contains( &printing ) {
+            Card { card, printing: printing }
+        } else {
+            Card { card, printing: printing }
         }
     }
 

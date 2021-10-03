@@ -19,7 +19,7 @@ use std::{
     collections::{HashMap, HashSet},
     env,
     fmt::Write,
-    sync::Arc,
+    sync::{Arc, RwLock},
 };
 
 use serenity::prelude::*;
@@ -31,7 +31,7 @@ use serenity::{
         help_commands,
         macros::{check, command, group, help, hook},
         Args, CommandGroup, CommandOptions, CommandResult, DispatchError, HelpOptions, Reason,
-        StandardFramework,
+        StandardFramework, Delimiter, 
     },
     http::Http,
     model::{
@@ -60,7 +60,7 @@ impl EventHandler for Handler {
 }
 
 #[group]
-#[commands(printings)]
+#[commands(printings, tradelist)]
 struct General;
 
 // The framework provides two built-in help commands for you to use.
@@ -279,7 +279,8 @@ async fn main() {
     {
         let mut data = client.data.write().await;
         data.insert::<CardDB::CardDB>(CardDB::create(String::from("AtomicCards.json")));
-        data.insert::<Tradelist::Tradelist>(HashMap::new());
+        data.insert::<Tradelist::Tradelist>(RwLock::new(HashMap::new()));
+        //data.insert::<Tradelist::Tradelist>(HashMap::new());
     }
 
     if let Err(why) = client.start().await {
@@ -287,7 +288,7 @@ async fn main() {
     }
 }
 
-#[command]
+#[command("printings")]
 async fn printings(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let arg_card = args.single::<String>();
 
@@ -324,6 +325,31 @@ async fn printings(ctx: &Context, msg: &Message, mut args: Args) -> CommandResul
     Ok(())
 }
 
+fn create_entries( db: &CardDB::CardDB, args: &str ) -> Vec<CardEntry::CardEntry> {
+    let mut digest = Vec::new();
+    let mut entries: Args = Args::new( args, &[Delimiter::Single('\n')] );
+    
+    let mut curr_entry = entries.single::<String>();
+    let mut entry_args: Args;
+    let mut entry_quantity: Types::CardCount;
+    let mut entry_name: String;
+    let mut entry_card: Option<&Card::AtomicCard>;
+    
+    while ! curr_entry.is_err() {
+        entry_args = Args::new( &curr_entry.unwrap(), &[Delimiter::Single(' ')] );
+        entry_quantity = entry_args.single::<Types::CardCount>().unwrap();
+        entry_name = String::from( entry_args.rest() );
+        entry_card = db.get_card( &entry_name );
+        if entry_card.is_none() {
+            ();
+        } else {
+            digest.push( CardEntry::new( entry_quantity, Card::new(entry_card.unwrap().clone(), String::from("")) ) );
+        }
+        curr_entry = entries.single::<String>();
+    }
+    digest
+}
+
 async fn view_tradelist( ctx: &Context, msg: &Message ) -> CommandResult {
     let data = ctx.data.read().await;
     let list = data.get::<Tradelist::Tradelist>().unwrap();
@@ -336,16 +362,25 @@ async fn view_tradelist( ctx: &Context, msg: &Message ) -> CommandResult {
     Ok(())
 }
 
-async fn add_to_tradelist( ctx: &Context, msg: &Message, mut args: Args ) -> CommandResult {
+async fn add_to_tradelist( ctx: &Context, msg: &Message, args: Args ) -> String {
+    println!( "Adding cards to the tradelist." );
+    let digest: String;
     let data = ctx.data.read().await;
-    let list = data.get::<Tradelist::Tradelist>().unwrap();
-    msg.channel_id
-        .say(
-            &ctx.http,
-            &String::from("Your tradelist has been updated. Use '!tradelist view' to see it."),
-        )
-        .await?;
-    Ok(())
+    let tradelists = data.get::<Tradelist::Tradelist>().unwrap();
+    let db = data.get::<CardDB::CardDB>().unwrap();
+    let entries = create_entries( db, args.rest() );
+    
+    if let Some(list) = tradelists.write().unwrap().get_mut( &msg.author.id ) {
+        digest = String::from("Your tradelist has been updated. Use '!tradelist view' to see it.");
+    } else {
+        tradelists.write().unwrap().insert( msg.author.id, Tradelist::new() );
+        digest = String::from("You have added a tradelist with some cards. To see it, use the command '!tradelist view'.");
+    }
+    
+    //for entry in entries {
+        //tradelists.write().unwrap().get_mut( &msg.author.id ).unwrap().add_card( entry );
+    //}
+    digest
 }
 
 async fn remove_from_tradelist( ctx: &Context, msg: &Message, mut args: Args ) -> CommandResult {
@@ -360,54 +395,57 @@ async fn remove_from_tradelist( ctx: &Context, msg: &Message, mut args: Args ) -
     Ok(())
 }
 
-async fn make_public_tradelist( ctx: &Context, msg: &Message, mut args: Args ) -> CommandResult {
-    let data = ctx.data.read().await;
-    let list = data.get::<Tradelist::Tradelist>().unwrap();
-    msg.channel_id
-        .say(
-            &ctx.http,
-            &String::from("Your tradelist has been set to public. Your tradelist **will** be found during tradelist searches."),
-        )
-        .await?;
-    Ok(())
-}
-
-async fn make_private_tradelist( ctx: &Context, msg: &Message, mut args: Args ) -> CommandResult {
+async fn make_public_tradelist( ctx: &Context, msg: &Message ) -> String {
+    println!( "Making the tradelist public." );
+    let digest: String;
     let data = ctx.data.read().await;
     let tradelists = data.get::<Tradelist::Tradelist>().unwrap();
-    let mut list = tradelists.get( msg.author.UserId );
-    msg.channel_id
-        .say(
-            &ctx.http,
-            &String::from("Your tradelist has been set to private. Your tradelist **will not** be found during tradelist searches."),
-        )
-        .await?;
-    Ok(())
+    if let Some(list) = tradelists.write().unwrap().get_mut( &msg.author.id ) {
+        list.set_public();
+        digest = String::from("Your tradelist has been set to public. Your tradelist **will** be found during tradelist searches.");
+    } else {
+        digest = String::from("You do not have a tradelist. To add one, just use the the command '!tradelist add' followed by a quantity and card name.");
+    }
+    digest
 }
 
-#[command]
-async fn tradelist(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
-    match args.single::<String>() {
-        Err(_) => {
-        msg.channel_id
-            .say(
-                &ctx.http,
-                &String::from("You need to specify what you want to do with your tradelist."),
-            )
-            .await?; Ok(()) }
-        Ok(task) => match task.as_str() {
-            "view" => view_tradelist( ctx, msg ).await,
-            "add" => add_to_tradelist( ctx, msg, args ).await,
-            "remove" => remove_from_tradelist( ctx, msg, args ).await,
-            "public" => make_public_tradelist( ctx, msg, args ).await,
-            "private" => make_private_tradelist( ctx, msg, args ).await,
-            _ => { 
-            msg.channel_id
-                .say(
-                    &ctx.http,
-                    &String::from("You need to specify what you want to do with your tradelist."),
-                )
-                .await?; Ok(()) }
-        }
+async fn make_private_tradelist( ctx: &Context, msg: &Message ) -> String {
+    println!( "Making the tradelist private." );
+    let digest: String;
+    let data = ctx.data.read().await;
+    let tradelists = data.get::<Tradelist::Tradelist>().unwrap();
+    if let Some(list) = tradelists.write().unwrap().get_mut( &msg.author.id ) {
+        list.set_private();
+        digest = String::from("Your tradelist has been set to private. Your tradelist **will not** be found during tradelist searches.");
+    } else {
+        digest = String::from("You do not have a tradelist. To add one, just use the the command '!tradelist add' followed by a quantity and card name.");
     }
+    digest
+}
+
+#[command("tradelist")]
+async fn tradelist(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
+    let mut response: String = String::from("");
+    let mut new_args: Args = Args::new( args.rest(), &[Delimiter::Single(' ')] );
+    if let Ok(task) = new_args.single::<String>() {
+        println!( "Task found: {}", task );
+        if task.as_str() == "" {
+        } else if task.as_str() == "view" {
+            //"view" => view_tradelist( ctx, msg ).await;
+        } else if task.as_str() == "add" {
+            response = add_to_tradelist( ctx, msg, new_args ).await;
+        } else if task.as_str() == "remove" {
+            //"remove" => remove_from_tradelist( ctx, msg, new_args ).await;
+        } else if task.as_str() == "public" { 
+            response = make_public_tradelist( ctx, msg ).await;
+        } else if task.as_str() == "private" { 
+            response = make_private_tradelist( ctx, msg ).await;
+        } else {
+            response = String::from("You need to specify what you want to do with your tradelist.");
+        }
+    } else {
+        response = String::from("You need to specify what you want to do with your tradelist.");
+    }
+    msg.channel_id.say( &ctx.http, &response ).await?;
+    Ok(())
 }

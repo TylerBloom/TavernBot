@@ -1,6 +1,7 @@
 pub mod Tradelist {
 
     use std::collections::HashMap;
+    use std::sync::RwLock;
     
     use serenity::model;
     use serenity::prelude::*;
@@ -15,7 +16,7 @@ pub mod Tradelist {
     }
     
     impl TypeMapKey for Tradelist {
-        type Value = HashMap<model::id::UserId, Tradelist>;
+        type Value = RwLock<HashMap<model::id::UserId, Tradelist>>;
     }
     
     pub fn new( ) -> Tradelist {
@@ -66,25 +67,25 @@ pub mod Tradelist {
             }
         }
 
-        pub fn add_card( &mut self, count: CardCount, card: Card::Card ) {
-            if count == 0 {
+        pub fn add_card( &mut self, entry: CardEntry::CardEntry ) {
+            if entry.count == 0 {
                 ()
             }
 
-            match self.cards.get(&card.get_name()) {
-                None => self.add_new_entry(CardEntry::new(count, card)),
-                Some(_) => self.increase_entry(CardEntry::new(count, card)),
+            match self.cards.get(&entry.card.get_name()) {
+                None => self.add_new_entry(entry),
+                Some(_) => self.increase_entry(entry),
             }
         }
 
-        pub fn remove_card( &mut self, count: CardCount, card: Card::Card ) {
-            if count == 0 {
+        pub fn remove_card( &mut self, entry: CardEntry::CardEntry ) {
+            if entry.count == 0 {
                 ()
             }
 
-            match self.cards.get(&card.get_name()) {
+            match self.cards.get(&entry.card.get_name()) {
                 None => (),
-                Some(_) => self.decrease_entry(CardEntry::new(count, card)),
+                Some(_) => self.decrease_entry(entry),
             }
         }
 
