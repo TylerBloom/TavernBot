@@ -5,7 +5,6 @@ pub mod Tradelist {
     use serenity::model;
     use serenity::prelude::*;
     
-    use crate::utils::Types::*;
     use crate::card::Card;
     use crate::card_entry::CardEntry;
     use crate::utils::Types::*;
@@ -16,7 +15,7 @@ pub mod Tradelist {
     }
     
     impl TypeMapKey for Tradelist {
-        type Value = HashMap<model::UserId, Tradelist>;
+        type Value = HashMap<model::id::UserId, Tradelist>;
     }
     
     pub fn new( ) -> Tradelist {

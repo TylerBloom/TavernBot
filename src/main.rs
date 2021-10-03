@@ -279,6 +279,7 @@ async fn main() {
     {
         let mut data = client.data.write().await;
         data.insert::<CardDB::CardDB>(CardDB::create(String::from("AtomicCards.json")));
+        data.insert::<Tradelist::Tradelist>(HashMap::new());
     }
 
     if let Err(why) = client.start().await {
@@ -320,6 +321,93 @@ async fn printings(ctx: &Context, msg: &Message, mut args: Args) -> CommandResul
             msg.channel_id.say(&ctx.http, &content).await?;
         }
     }
-
     Ok(())
+}
+
+async fn view_tradelist( ctx: &Context, msg: &Message ) -> CommandResult {
+    let data = ctx.data.read().await;
+    let list = data.get::<Tradelist::Tradelist>().unwrap();
+    msg.channel_id
+        .say(
+            &ctx.http,
+            &String::from("Here is your tradelist:"),
+        )
+        .await?;
+    Ok(())
+}
+
+async fn add_to_tradelist( ctx: &Context, msg: &Message, mut args: Args ) -> CommandResult {
+    let data = ctx.data.read().await;
+    let list = data.get::<Tradelist::Tradelist>().unwrap();
+    msg.channel_id
+        .say(
+            &ctx.http,
+            &String::from("Your tradelist has been updated. Use '!tradelist view' to see it."),
+        )
+        .await?;
+    Ok(())
+}
+
+async fn remove_from_tradelist( ctx: &Context, msg: &Message, mut args: Args ) -> CommandResult {
+    let data = ctx.data.read().await;
+    let list = data.get::<Tradelist::Tradelist>().unwrap();
+    msg.channel_id
+        .say(
+            &ctx.http,
+            &String::from("Your tradelist has been updated. Use '!tradelist view' to see it."),
+        )
+        .await?;
+    Ok(())
+}
+
+async fn make_public_tradelist( ctx: &Context, msg: &Message, mut args: Args ) -> CommandResult {
+    let data = ctx.data.read().await;
+    let list = data.get::<Tradelist::Tradelist>().unwrap();
+    msg.channel_id
+        .say(
+            &ctx.http,
+            &String::from("Your tradelist has been set to public. Your tradelist **will** be found during tradelist searches."),
+        )
+        .await?;
+    Ok(())
+}
+
+async fn make_private_tradelist( ctx: &Context, msg: &Message, mut args: Args ) -> CommandResult {
+    let data = ctx.data.read().await;
+    let tradelists = data.get::<Tradelist::Tradelist>().unwrap();
+    let mut list = tradelists.get( msg.author.UserId );
+    msg.channel_id
+        .say(
+            &ctx.http,
+            &String::from("Your tradelist has been set to private. Your tradelist **will not** be found during tradelist searches."),
+        )
+        .await?;
+    Ok(())
+}
+
+#[command]
+async fn tradelist(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
+    match args.single::<String>() {
+        Err(_) => {
+        msg.channel_id
+            .say(
+                &ctx.http,
+                &String::from("You need to specify what you want to do with your tradelist."),
+            )
+            .await?; Ok(()) }
+        Ok(task) => match task.as_str() {
+            "view" => view_tradelist( ctx, msg ).await,
+            "add" => add_to_tradelist( ctx, msg, args ).await,
+            "remove" => remove_from_tradelist( ctx, msg, args ).await,
+            "public" => make_public_tradelist( ctx, msg, args ).await,
+            "private" => make_private_tradelist( ctx, msg, args ).await,
+            _ => { 
+            msg.channel_id
+                .say(
+                    &ctx.http,
+                    &String::from("You need to specify what you want to do with your tradelist."),
+                )
+                .await?; Ok(()) }
+        }
+    }
 }
