@@ -25,24 +25,30 @@ pub mod Card {
         }
     }
 
-    #[derive( Clone )]
-    pub struct Card  {
+    #[derive(Clone)]
+    pub struct Card {
         pub card: AtomicCard,
-        pub printing: String
+        pub printing: String,
     }
 
-    pub fn new( card: AtomicCard, printing: String ) -> Card {
-        if card.printings.contains( &printing ) {
-            Card { card, printing: printing }
+    pub fn new(card: AtomicCard, printing: String) -> Card {
+        if card.printings.contains(&printing) {
+            Card {
+                card,
+                printing: printing,
+            }
         } else {
-            Card { card, printing: printing }
+            Card {
+                card,
+                printing: printing,
+            }
         }
     }
 
     impl Card {
-        pub fn matches( &self, other: &Card ) -> bool {
-            let mut digest : bool = self.card == other.card;
-            if( ! self.printing.is_empty() && ! other.printing.is_empty() ) {
+        pub fn matches(&self, other: &Card) -> bool {
+            let mut digest: bool = self.card == other.card;
+            if (!self.printing.is_empty() && !other.printing.is_empty()) {
                 digest &= self.printing == other.printing;
             }
             digest
@@ -51,10 +57,19 @@ pub mod Card {
         pub fn get_name(&self) -> String {
             self.card.name.clone()
         }
+        
+        pub fn to_string( &self ) -> String {
+            if( self.printing.is_empty() )
+            {
+                format!( "{}", self.card.to_string() )
+            } else {
+                format!( "{} [{}]", self.card.to_string(), self.printing )
+            }
+        }
     }
 
     impl PartialEq for Card {
-        fn eq( &self, other: &Card ) -> bool {
+        fn eq(&self, other: &Card) -> bool {
             self.card == other.card && self.printing == other.printing
         }
     }

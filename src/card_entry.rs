@@ -29,5 +29,9 @@ pub mod CardEntry {
         pub fn update_count(&mut self, count: CardCount) {
             self.count = count;
         }
+        
+        pub fn to_string( &self ) -> String {
+            format!( "{} {}", self.count, self.card.to_string()  )
+        }
     }
 }

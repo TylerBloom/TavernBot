@@ -1,7 +1,7 @@
 pub mod Tradelist {
 
     use std::collections::HashMap;
-    use std::sync::RwLock;
+    use dashmap::DashMap;
     
     use serenity::model;
     use serenity::prelude::*;
@@ -16,7 +16,7 @@ pub mod Tradelist {
     }
     
     impl TypeMapKey for Tradelist {
-        type Value = RwLock<HashMap<model::id::UserId, Tradelist>>;
+        type Value = DashMap<model::id::UserId, Tradelist>;
     }
     
     pub fn new( ) -> Tradelist {
@@ -103,6 +103,18 @@ pub mod Tradelist {
                     break;
                 }
             }
+            digest
+        }
+    
+        pub fn serialize( &self ) -> String {
+            let mut digest: String = String::from("{ \"title\": \"Your Tradelist:\", \"fields\": [ \"name\": \"Cards:\", \"value\": ");
+            for (key, val) in self.cards.iter() {
+                for c in val {
+                    digest.push_str( &c.to_string() );
+                    digest.push_str( "\n" );
+                }
+            }
+            digest.push_str( "] }" );
             digest
         }
     }

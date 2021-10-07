@@ -5,6 +5,7 @@ authors = ["TylerBloom <tylerbloom2222@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+dashmap = { version = "4.0.2" }
 serenity = { version = "0.10.0", features = ["framework", "standard_framework", "rustls_backend", "client", "gateway", "rustls_backend", "model"] }
 tokio = { version = "1.0", features = ["macros", "rt-multi-thread"] }
 uuid = { version = "0.8", features = ["v4"] }
