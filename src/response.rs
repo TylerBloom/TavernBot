@@ -1,14 +1,31 @@
 pub mod Response {
+    
+    use std::collections::HashMap;
 
     use serenity::prelude::*;
     use serenity::model::channel::Embed;
     use serenity::framework::standard::CommandResult;
     use serenity::model::channel::Message;
     use serenity::builder::CreateMessage;
+    use serenity::utils::Colour;
+    
+    // Models a serenity Embed.  Unlike in discord.py, embeds can't really be
+    // created, modified, and then sent.  The send_message method takes a
+    // FnOnce of a CreateEmbed, so they have to be created when they are sent.
+    // To cope with this, EmbedSpoof models that bare minimum for an embed
+    // while putting a few restrictions on its use.  All EmbedSpoofs must have
+    // a title and a color.
+    // TODO: Consider using webhooks
+    #[derive(Clone)]
+    pub struct EmbedSpoof {
+        pub title: String,
+        pub colour: Colour,
+        pub fields: Vec<(String, String, bool)>,
+    }
     
     pub struct Response {
         content: Option<String>,
-        embed: Option<Embed>,
+        embed: Option<EmbedSpoof>,
     }
 
     pub fn new() -> Response {
@@ -20,11 +37,12 @@ pub mod Response {
     pub async fn send_message( res: Response, ctx: &Context, msg: &Message ) -> CommandResult {
         if( res.content.is_some() && res.embed.is_some() ) {
             // The message contains both content and an embed
+            let embed = res.embed.unwrap().clone();
             msg.channel_id.send_message(&ctx.http, |m| {
-                m.content(res.content());
                 m.embed( |mut e| {
-                    e.title(&res.embed_title());
-                    e.fields( res.embed.unwrap().fields.iter().map( |f| { (f.name.clone(), f.value.clone(), f.inline) } ) );
+                    e.title( embed.title );
+                    e.colour( embed.colour );
+                    e.fields( embed.fields );
                     
                     e
                 } );
@@ -38,10 +56,12 @@ pub mod Response {
             Ok(())
         } else if( res.embed.is_some() ) {
             // The response only contains an embed
+            let embed = res.embed.unwrap().clone();
             msg.channel_id.send_message(&ctx.http, |m| {
                 m.embed( |mut e| {
-                    e.title(&res.embed_title());
-                    e.fields( res.embed.unwrap().fields.iter().map( |f| { (f.name.clone(), f.value.clone(), f.inline) } ) );
+                    e.title( embed.title );
+                    e.colour( embed.colour );
+                    e.fields( embed.fields );
                     
                     e
                 } );
@@ -69,13 +89,10 @@ pub mod Response {
         pub fn embed_title( &self ) -> String {
             match self.embed.clone() {
                 None => String::from(""),
-                Some(e) => match e.title {
-                    None => String::from(""),
-                    Some(t) => t.clone(),
-                }
+                Some(e) => e.title,
             }
         }
-        pub fn set_embed( &mut self, embed: Embed ) {
+        pub fn set_embed( &mut self, embed: EmbedSpoof ) {
             self.embed = Some(embed);
         }
     }

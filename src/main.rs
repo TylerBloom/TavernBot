@@ -362,12 +362,7 @@ async fn view_tradelist(ctx: &Context, msg: &Message) -> Response::Response {
 
     if let Some(list) = tradelists.get(&msg.author.id) {
         println!( "{}", list.to_string() );
-        let temp_embed = Embed::fake( |mut e| { 
-            e.title(String::from("Your Tradelist: "));
-            e.field(String::from("Cards"), list.to_string(), true );
-            e
-            });
-        digest.set_embed( temp_embed );
+        digest.set_embed( list.get_embed() );
     } else {
         digest.set_content( String::from("You don't have a tradelist. Use '!tradelist add' to add some cards first.") );
     }

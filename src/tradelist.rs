@@ -5,7 +5,9 @@ pub mod Tradelist {
     
     use serenity::model;
     use serenity::prelude::*;
+    use serenity::utils::Colour;
     
+    use crate::response::Response;
     use crate::card::Card;
     use crate::card_entry::CardEntry;
     use crate::utils::Types::*;
@@ -114,6 +116,18 @@ pub mod Tradelist {
                     digest.push_str( "\n" );
                 }
             }
+            digest
+        }
+        
+        pub fn get_embed( &self ) -> Response::EmbedSpoof {
+            let mut digest = Response::EmbedSpoof {
+                title: String::from("Your Tradelist:"),
+                colour: if self.is_public {Colour::FOOYOO} else {Colour::RED},
+                fields: Vec::new()
+            };
+            let public_word = if self.is_public {String::from("public")} else {String::from("private")};
+            digest.fields.push( (format!("This tradelist is {}.", public_word), String::from("\u{200b}"), false) );
+            digest.fields.push( (String::from("Cards"), self.to_string(), true) );
             digest
         }
     }
