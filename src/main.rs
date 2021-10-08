@@ -36,12 +36,12 @@ use serenity::{
     },
     http::Http,
     model::{
-        channel::{Channel, Message},
+        channel::{Channel, Message, Embed, EmbedField},
         gateway::Ready,
         id::UserId,
         permissions::Permissions,
     },
-    utils::{content_safe, ContentSafeOptions},
+    utils::{content_safe, ContentSafeOptions, Colour},
 };
 use tokio::sync::Mutex;
 use dashmap::DashMap;
@@ -283,7 +283,6 @@ async fn main() {
         let mut data = client.data.write().await;
         data.insert::<CardDB::CardDB>(CardDB::create(String::from("AtomicCards.json")));
         data.insert::<Tradelist::Tradelist>(DashMap::new());
-        //data.insert::<Tradelist::Tradelist>(HashMap::new());
     }
 
     if let Err(why) = client.start().await {
@@ -356,35 +355,40 @@ fn create_entries(db: &CardDB::CardDB, args: &str) -> Vec<CardEntry::CardEntry> 
     digest
 }
 
-async fn view_tradelist(ctx: &Context, msg: &Message) -> String {
-    let digest: String;
+async fn view_tradelist(ctx: &Context, msg: &Message) -> Response::Response {
+    let mut digest: Response::Response = Response::new();
     let data = ctx.data.read().await;
     let tradelists = data.get::<Tradelist::Tradelist>().unwrap();
 
     if let Some(list) = tradelists.get(&msg.author.id) {
-        println!( "{}", list.serialize() );
-        digest = list.serialize();
+        println!( "{}", list.to_string() );
+        let temp_embed = Embed::fake( |mut e| { 
+            e.title(String::from("Your Tradelist: "));
+            e.field(String::from("Cards"), list.to_string(), true );
+            e
+            });
+        digest.set_embed( temp_embed );
     } else {
-        digest = String::from("You don't have a tradelist. Use '!tradelist add' to add some cards first.");
+        digest.set_content( String::from("You don't have a tradelist. Use '!tradelist add' to add some cards first.") );
     }
     
     digest
 }
 
-async fn add_to_tradelist(ctx: &Context, msg: &Message, args: Args) -> String {
+async fn add_to_tradelist(ctx: &Context, msg: &Message, args: Args) -> Response::Response {
     println!("Adding cards to the tradelist.");
-    let digest: String;
+    let mut digest: Response::Response = Response::new();
     let data = ctx.data.write().await;
     let tradelists = data.get::<Tradelist::Tradelist>().unwrap();
     let db = data.get::<CardDB::CardDB>().unwrap();
     let entries = create_entries(db, args.rest());
 
     if let Some(list) = tradelists.get_mut(&msg.author.id) {
-        digest = String::from("Your tradelist has been updated. Use '!tradelist view' to see it.");
+        digest.set_content( String::from("Your tradelist has been updated. Use '!tradelist view' to see it.") );
     } else {
         tradelists
             .insert(msg.author.id, Tradelist::new());
-        digest = String::from("You have added a tradelist with some cards. To see it, use the command '!tradelist view'.");
+        digest.set_content( String::from("You have added a tradelist with some cards. To see it, use the command '!tradelist view'.") );
     }
 
     for entry in entries {
@@ -396,69 +400,63 @@ async fn add_to_tradelist(ctx: &Context, msg: &Message, args: Args) -> String {
     digest
 }
 
-async fn remove_from_tradelist(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
+async fn remove_from_tradelist(ctx: &Context, msg: &Message, mut args: Args) -> Response::Response {
+    let mut digest: Response::Response = Response::new();
     let data = ctx.data.read().await;
     let list = data.get::<Tradelist::Tradelist>().unwrap();
-    msg.channel_id
-        .say(
-            &ctx.http,
-            &String::from("Your tradelist has been updated. Use '!tradelist view' to see it."),
-        )
-        .await?;
-    Ok(())
+    digest
 }
 
-async fn make_public_tradelist(ctx: &Context, msg: &Message) -> String {
+async fn make_public_tradelist(ctx: &Context, msg: &Message) -> Response::Response {
     println!("Making the tradelist public.");
-    let digest: String;
+    let mut digest: Response::Response = Response::new();
     let data = ctx.data.read().await;
     let tradelists = data.get::<Tradelist::Tradelist>().unwrap();
     if let Some(mut list) = tradelists.get_mut(&msg.author.id) {
         list.set_public();
-        digest = String::from("Your tradelist has been set to public. Your tradelist **will** be found during tradelist searches.");
+        digest.set_content( String::from("Your tradelist has been set to public. Your tradelist **will** be found during tradelist searches.") );
     } else {
-        digest = String::from("You do not have a tradelist. To add one, just use the the command '!tradelist add' followed by a quantity and card name.");
+        digest.set_content( String::from("You do not have a tradelist. To add one, just use the the command '!tradelist add' followed by a quantity and card name.") );
     }
     digest
 }
 
-async fn make_private_tradelist(ctx: &Context, msg: &Message) -> String {
+async fn make_private_tradelist(ctx: &Context, msg: &Message) -> Response::Response {
     println!("Making the tradelist private.");
-    let digest: String;
+    let mut digest: Response::Response = Response::new();
     let data = ctx.data.read().await;
     let tradelists = data.get::<Tradelist::Tradelist>().unwrap();
     if let Some(mut list) = tradelists.get_mut(&msg.author.id) {
         list.set_private();
-        digest = String::from("Your tradelist has been set to private. Your tradelist **will not** be found during tradelist searches.");
+        digest.set_content( String::from("Your tradelist has been set to private. Your tradelist **will not** be found during tradelist searches." ) );
     } else {
-        digest = String::from("You do not have a tradelist. To add one, just use the the command '!tradelist add' followed by a quantity and card name.");
+        digest.set_content( String::from( "You do not have a tradelist. To add one, just use the the command '!tradelist add' followed by a quantity and card name." ) );
     }
     digest
 }
 
 #[command("tradelist")]
 async fn tradelist(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
-    let mut response: String = String::from("");
+    let mut digest: Response::Response = Response::new();
     let mut new_args: Args = Args::new(args.rest(), &[Delimiter::Single(' ')]);
     if let Ok(task) = new_args.single::<String>() {
         println!("Task found: {}", task);
         if task.as_str() == "" {
         } else if task.as_str() == "view" {
-            response = view_tradelist( ctx, msg ).await;
+            digest = view_tradelist( ctx, msg ).await;
         } else if task.as_str() == "add" {
-            response = add_to_tradelist(ctx, msg, new_args).await;
+            digest = add_to_tradelist(ctx, msg, new_args).await;
         } else if task.as_str() == "remove" {
             //"remove" => remove_from_tradelist( ctx, msg, new_args ).await;
         } else if task.as_str() == "public" {
-            response = make_public_tradelist(ctx, msg).await;
+            digest = make_public_tradelist(ctx, msg).await;
         } else if task.as_str() == "private" {
-            response = make_private_tradelist(ctx, msg).await;
+            digest = make_private_tradelist(ctx, msg).await;
         } else {
-            response = String::from("You need to specify what you want to do with your tradelist.");
+            digest.set_content( String::from("You need to specify what you want to do with your tradelist.") );
         }
     } else {
-        response = String::from("You need to specify what you want to do with your tradelist.");
+        digest.set_content(String::from("You need to specify what you want to do with your tradelist.") );
     }
-    msg.channel_id.say(&ctx.http, &response).await?;
-    Ok(())
+    Response::send_message( digest, ctx, msg ).await
 }

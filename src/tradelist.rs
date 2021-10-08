@@ -106,15 +106,14 @@ pub mod Tradelist {
             digest
         }
     
-        pub fn serialize( &self ) -> String {
-            let mut digest: String = String::from("{ \"title\": \"Your Tradelist:\", \"fields\": [ \"name\": \"Cards:\", \"value\": ");
+        pub fn to_string( &self ) -> String {
+            let mut digest: String = String::from("");
             for (key, val) in self.cards.iter() {
                 for c in val {
                     digest.push_str( &c.to_string() );
                     digest.push_str( "\n" );
                 }
             }
-            digest.push_str( "] }" );
             digest
         }
     }
